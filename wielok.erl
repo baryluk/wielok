@@ -23,6 +23,7 @@
 
 -export([start/0, start/1, start_global/1, stop/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([acq/2, acq_excl/2, cancel_wait/2]).
 -export([acq/1, acq_excl/1, rel/1, rel_excl/1, cancel/1, cancel_wait/1, uncancel/1, stat/1]).
 -export([acq/0, acq_excl/0, rel/0, rel_excl/0, cancel/0, cancel_wait/0, uncancel/0, stat/0]).
 
@@ -31,8 +32,9 @@
 
 -record(state, {waiting_readers=[], waiting_readers_len=0, waiting_writers=queue:new(), who=undefined, canceled=false, waiting_cancelers=[]}).
 -define(W_EMPTY, {[],[]}).
--define(TIMEOUT, infinity). % timeout for blocking acq, acq_excl, cancel_wait
-                            % for rest timeout is default 5 seconds in case of overload.
+-define(TIMEOUT, (60*1000)).
+                    % timeout for blocking acq, acq_excl, cancel_wait
+                    % for rest timeout is default 5 seconds in case of overload.
 -define(NAME0, ?MODULE).
 -define(NAME, {global, ?NAME0}).
 
@@ -278,18 +280,24 @@ handle_info(Other, S) ->
 
 % EXTERNAL API
 
+acq_excl(P, T) ->
+	gen_server:call(P, acq_excl, T).
 acq_excl(P) ->
-	gen_server:call(P, acq_excl, ?TIMEOUT).
+	acq_excl(P, ?TIMEOUT).
 rel_excl(P) ->
 	gen_server:call(P, rel_excl).
+acq(P, T) ->
+	gen_server:call(P, acq, T).
 acq(P) ->
-	gen_server:call(P, acq, ?TIMEOUT).
+	acq(P, ?TIMEOUT).
 rel(P) ->
 	gen_server:call(P, rel).
 cancel(P) ->
 	gen_server:call(P, cancel).
+cancel_wait(P,T) ->
+	gen_server:call(P, cancel_wait, T).
 cancel_wait(P) ->
-	gen_server:call(P, cancel_wait, ?TIMEOUT).
+	cancel_wait(P, ?TIMEOUT).
 
 uncancel(P) ->
 	gen_server:call(P, uncancel).
