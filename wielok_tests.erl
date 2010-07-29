@@ -61,7 +61,11 @@ gen_test(N, MainSeed) ->
 
 	done = receive_all(Processes),
 
-	io:format("wielok stoping: ~p~n", [wielok:stat(?NAME)]),
+	LastState = wielok:stat(?NAME),
+
+	{state,[],0,{[],[]},_,_,[]} = LastState,
+
+	io:format("wielok stoping: ~p~n", [LastState]),
 	wielok:stop(?NAME),
 	sleep(10),
 	ok.
