@@ -1,0 +1,94 @@
+Advanced locking for reader-writer problem.
+
+Start locking server
+
+    wielok:start(mylock).         % on local node
+    wielok:start_global(mylock).  % or in whole Erlang cluster
+
+In writers:
+
+    case wielok:acq_excl(mylock) of
+        ok ->
+              do_something(),
+              wielok:rel_excl(mylock);
+        R ->
+              io:format("Read/Write (exclusive) lock not granted, reason ~p~n", [R])
+    end.
+
+In readers:
+
+    case wielok:acq(mylock) of
+        ok ->
+              do_something(),
+              wielok:rel(mylock);
+        R ->
+              io:format("Read only (shared) lock not granted, reason ~p~n", [R])
+    end.
+
+
+You can 'cancel' lock:
+
+    wielok:cancel(mylock).
+
+    Canceling, makes all processes waiting on acq/0,1, or acq_excl/0,1 to abort (and not return 'ok'),
+    It also prevent any new processes from calling acq/0,1 or acq_excl/0,1.
+
+    cancel/0,1 retruns 'canceled' or 'already_canceled'.
+
+There is also 'cancel_wait':
+
+    wielok:cancel_wait(mylock).
+
+    This is the same as cancel/0,1 (and returns 'canceled' or 'already_canceled'), but
+    it als waits for current lock holders to release it back.
+
+    Once canceled (by cancel_*/0,1) , new locks cannot be aquired.
+
+You can also 'uncancel' lock:
+
+    wielok:uncancel(mylock).
+
+    It returns 'uncanceled' or 'already_uncanceled'.
+
+    It makes acquiring locks posible back again. It also makes canel_wait
+    to return 'uncanceled', if cancel_wait/0,1 was waiting for release.
+
+You can also stop server:
+
+    wielok:stop(mylock).
+
+
+You can also check current status:
+
+    wielok:stat(mylock).
+
+
+acq, acq_excl and cancel_wait have default timeout of 1 minute, if you need more,
+please add second parameter for it. Using 'infinity' is very bad practice.
+
+All other calls have default 5 seconds timeout, and cannot be modified.
+
+In case of timeout, functions will raise exception.
+
+Releaseing not handled lock, is not checked, and can create bugs.
+
+Calling rel, rel_excl, if no such lock exists, will make this function throw exception.
+
+If process holding lock will crash, its lock will be released automatically.
+If writer will crash and will hold acq_excl, whole manager will crash,
+as it is not safe to assume that data are consistent.
+
+Beyond this (crashed writer), wielok server should NEVER crash under any cirscumstances,
+even if on bad API usage. Still some functions can crash on client side.
+
+
+
+TODO:
+  - check if rel, rel_excl is called by correct process, and passed token is correct.
+  - prevent one process from aquiring two locks.
+  - include optional deadlock detection beetwen multiple wielok server instances.
+  - if client process crash:
+    - remove it from queues, (it do not hold lock, but would be granted lock in the future)
+    - remove process from lock holder,
+    - if it was process holding write lock, crash/stop/secure whole server.
+
