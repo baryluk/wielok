@@ -13,6 +13,18 @@
 %         to store information about processes which helds locks. But this can be also handy
 %         to prevent same process obtaining two locks.
 %
+% What more? We can define for how long we want a lock (for example we want to use disk, and know
+% how much time we will use it, in the same scale to the other holders. We can also have deadlines
+% (that we need lock after time X, and before time Y, and for time Z). We then can implement
+% some kind of scheduler, and cancelation system if lock holder do not released it.
+% It will be probably only usefull for readers.
+%
+% We can also limit number of concurrant readers (to not overload system to much by resource usage).
+%
+% We can also for example, if there are more than N writers in the queue, and
+% there are still some readers, and no reader release lock in last M miliseconds,
+% then start killing them...
+%
 % Copyright: Witold Baryluk, 2010
 % License: BSD
 %
