@@ -38,7 +38,7 @@
 -export([acq/2, acq_excl/2, cancel_wait/2]).
 -export([acq/1, acq_excl/1, rel/1, rel_excl/1, cancel/1, cancel_wait/1, uncancel/1, stat/1]).
 -export([acq/0, acq_excl/0, rel/0, rel_excl/0, cancel/0, cancel_wait/0, uncancel/0, stat/0]).
-
+-export([read/2, write/2]).
 
 % HELPER MACROS
 
@@ -334,3 +334,40 @@ cancel() -> cancel(?NAME0).
 cancel_wait() -> cancel_wait(?NAME0).
 uncancel() -> uncancel(?NAME0).
 stat() -> stat(?NAME0).
+
+%
+% transactional API
+%
+% TODO: pre-detect some deadlocks on client side, by storing acq lock info in process dictionary
+
+read(N, F) when is_function(F) ->
+	try wielok:acq(N) of
+		ok ->
+			V = try F() of
+				X -> {ok, X}
+			catch
+				E:EV -> {error, eval, {E, EV}}
+			end,
+			wielok:rel(N),
+			V;
+		What ->
+			{error, acq, What}
+	catch
+		E:EV -> {error, acq, {E,EV}}
+	end.
+
+write(N, F) when is_function(F) ->
+	try wielok:acq_excl(N) of
+		ok ->
+			V = try F() of
+				X -> {ok, X}
+			catch
+				E:EV -> {error, eval, {E, EV}}
+			end,
+			wielok:rel_excl(N),
+			V;
+		What ->
+			{error, acq, What}
+	catch
+		E:EV -> {error, acq, {E,EV}}
+	end.

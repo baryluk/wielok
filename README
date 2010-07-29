@@ -83,6 +83,25 @@ even if on bad API usage. Still some functions can crash on client side.
 
 
 
+One can also use "transactional" API (similar to mnesia:transaction/1):
+
+   wielok:read(mylock, fun() ->
+              ...
+              ....
+   end).
+
+   wielok:write(mylock, fun() ->
+              ...
+              ....
+   end).
+
+   This functions return:
+        {ok, Value}  - where Value returned from fun
+        {error, eval, Reason} - fun execution crashed
+        {error, acq, Reason} - lock could not be acquired
+                    (no such lock server, or it was canceled).
+
+
 TODO:
   - check if rel, rel_excl is called by correct process, and passed token is correct.
   - prevent one process from aquiring two locks.

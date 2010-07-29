@@ -94,7 +94,9 @@ test_start(I, Parent, Seed, Count) ->
 		{0.02, cancel_wait, fun subtest_cancel_wait/0},
 		{0.08, uncancel, fun subtest_uncancel/0},
 		{0.1, acq_excl, fun subtest_acq_excl/0}, % and rel_excl
-		{0.9, acq, fun subtest_acq/0} % and rel
+		{0.9, acq, fun subtest_acq/0}, % and rel
+		{0.1, acq_excl_trans, fun subtest_acq_excl_trans/0},
+		{0.9, acq_trans, fun subtest_acq_trans/0}
 	],
 	ProbSum = lists:foldl(fun({Prob,_,_},Sum) when Prob > 0.0 -> Sum+Prob end, 0.0, Tests),
 	repeat(X, fun(_) -> test_go_sub(Tests, ProbSum) end),
@@ -175,6 +177,45 @@ subtest_acq_excl() ->
 		canceled ->
 			ok
 	end.
+
+
+subtest_acq_trans() ->
+	X = wielok:read(?NAME, fun() ->
+			case random:uniform(20) of
+				1 ->
+					throw(bad);
+				_ ->
+					ok
+			end,
+			Timeout = random:uniform(40),
+			sleep(Timeout),
+			case random:uniform(20) of
+				1 ->
+					throw(bad);
+				_ ->
+					ok
+			end
+		end),
+	?debug("~p read done ~p~n",[self(), X]).
+
+subtest_acq_excl_trans() ->
+	X = wielok:write(?NAME, fun() ->
+			case random:uniform(20) of
+				1 ->
+					throw(bad);
+				_ ->
+					ok
+			end,
+			Timeout = random:uniform(40),
+			sleep(Timeout),
+			case random:uniform(20) of
+				1 ->
+					throw(bad);
+				_ ->
+					ok
+			end
+		end),
+	?debug("~p write done ~p~n",[self(), X]).
 
 
 sleep(T) ->
