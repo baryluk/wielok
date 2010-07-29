@@ -220,7 +220,7 @@ c(cancel, _From, S = #state{waiting_readers=R,waiting_writers=W}) ->
 c(cancel_wait, _From, S = #state{canceled=true,who=undefined}) ->
 	{reply, ok, S};
 c(cancel_wait, From, S = #state{waiting_readers=R,waiting_writers=W,who=Who,waiting_cancelers=C}) ->
-	spawn_cancel_both(R,W),
+	spawn_cancel_both(R, W),
 	case Who of
 		undefined ->
 			[] = C, % internal invariants
