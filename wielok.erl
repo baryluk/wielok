@@ -211,8 +211,8 @@ c(rel, From, S = #state{waiting_readers=_R,waiting_writers=W,who={readers,N0}}) 
 c(cancel, _From, S = #state{canceled=true}) ->
 	{reply, ok, S};
 c(cancel, _From, S = #state{waiting_readers=R,waiting_writers=W}) ->
-	spawn_cancel_both(R,W),
-	{reply, ok, S#state{canceled=true,waiting_readers=[],waiting_writers=?W_EMPTY}};
+	spawn_cancel_both(R, W),
+	{reply, ok, S#state{canceled=true,waiting_readers=[],waiting_readers_len=0,waiting_writers=?W_EMPTY}};
 
 c(cancel_wait, _From, S = #state{canceled=true,who=undefined}) ->
 	{reply, ok, S};
@@ -222,7 +222,7 @@ c(cancel_wait, From, S = #state{waiting_readers=R,waiting_writers=W,who=Who,wait
 		undefined ->
 			[] = C, % internal invariants
 			[] = R,
-			[] = W,
+			?W_EMPTY = W,
 			0 = S#state.waiting_readers_len,
 			{reply, ok, S#state{canceled=true}};
 		_ ->
@@ -232,7 +232,10 @@ c(cancel_wait, From, S = #state{waiting_readers=R,waiting_writers=W,who=Who,wait
 
 c(uncancel, _From, S = #state{canceled=true,waiting_cancelers=C}) ->
 	notify_cancelers(C, cancelation_canceled),
-	{reply, ok, S#state{canceled=false,waiting_cancelers=[]}};
+	{reply, uncanceled, S#state{canceled=false,waiting_cancelers=[]}};
+
+c(uncancel, _From, S = #state{canceled=false}) ->
+	{reply, already_uncanceled, S};
 
 c(stat, _, S) ->
 	{reply, S, S};
