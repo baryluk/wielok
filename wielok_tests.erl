@@ -9,11 +9,27 @@
 -define(NAME, {global,wielok}).
 
 
-go() ->
-	[ ok = gen_test(N) || N <- gen_sizes(2000) ].
+repeat(N, F) when is_function(F, 1), is_integer(N), N >= 0 ->
+	repeat(F, N, 0).
 
-gen_sizes(N) ->
-	[ gen_size() || _ <- lists:seq(1,N) ].
+repeat(_F,N,N) ->
+	ok;
+repeat(F,N,I) ->
+	F(I+1),
+	repeat(F,N,I+1).
+
+
+repeat_collect(N, F) when is_function(F, 1), is_integer(N), N >= 0 ->
+	repeat_collect(F, N, 0, []).
+
+repeat_collect(_F,N,N,Acc) ->
+	lists:reverse(Acc);
+repeat_collect(F,N,I,Acc) ->
+	X = F(I+1),
+	repeat_collect(F,N,I+1,[X|Acc]).
+
+go() ->
+	repeat(2000, fun(_) -> ok = gen_test(gen_size()) end).
 
 gen_size() ->
 	case random:uniform(7) of
@@ -41,7 +57,7 @@ gen_test(N, MainSeed) ->
 	Count = gen_size(), % maximal number of command to execute by processes
 
 	io:format("Starting ~p processes, each for maximal ~p commands.~n", [N, Count]),
-	Processes = [ spawn_link(fun() -> test_start(I, Self, {seed, MainSeed, I}, Count) end) || I <- lists:seq(1, N) ],
+	Processes = repeat_collect(N, fun(I) -> spawn_link(fun() -> test_start(I, Self, {seed, MainSeed, I}, Count) end) end),
 
 	done = receive_all(Processes),
 
@@ -77,7 +93,7 @@ test_start(I, Parent, Seed, Count) ->
 		{0.9, acq, fun subtest_acq/0} % and rel
 	],
 	ProbSum = lists:foldl(fun({Prob,_,_},Sum) when Prob > 0.0 -> Sum+Prob end, 0.0, Tests),
-	lists:foreach(fun(_) -> test_go_sub(Tests, ProbSum) end, lists:seq(1, X)),
+	repeat(X, fun(_) -> test_go_sub(Tests, ProbSum) end),
 	Parent ! {self(), done}.
 
 test_go_sub(Tests, ProbSum) ->
@@ -99,7 +115,7 @@ subtest_stat() ->
 	X = wielok:stat(?NAME),
 	?debug("~p stat done ~p~n",[self(), X]),
 	ok = case X of
-		{state, R, RL, W, Who, C, CC} when is_list(R), is_integer(RL), RL >= 0, is_boolean(C), is_list(CC) ->
+		{state, R, RL, W, _Who, C, CC} when is_list(R), is_integer(RL), RL >= 0, is_boolean(C), is_list(CC) ->
 			case queue:is_queue(W) of
 				true -> ok;
 				_ -> errorW
