@@ -50,7 +50,8 @@
 -define(NAME0, ?MODULE).
 -define(NAME, {global, ?NAME0}).
 
--define(debug, true).   % enable debuging, and additional internal checks
+%-define(debug, true).   % enable debuging, and additional internal checks
+-define(debug, false).
 
 % INIT
 
