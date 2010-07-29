@@ -21,7 +21,7 @@
 
 -behaviour(gen_server).
 
--export([start/0, start/1, start_global/1, stop/0]).
+-export([start/0, start/1, start_global/1, stop/0, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 -export([acq/2, acq_excl/2, cancel_wait/2]).
 -export([acq/1, acq_excl/1, rel/1, rel_excl/1, cancel/1, cancel_wait/1, uncancel/1, stat/1]).
@@ -65,7 +65,10 @@ code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 stop() ->
-	gen_server:cast(?NAME, stop).
+	stop(?NAME).
+
+stop(Name) ->
+	gen_server:cast(Name, stop).
 
 % testing ( can be removed later )
 
@@ -310,11 +313,11 @@ stat(P) ->
 
 % default shortcut, to global locker
 
-acq_excl() -> acq_excl(?NAME).
-rel_excl() -> rel_excl(?NAME).
-acq() -> acq(?NAME).
-rel() -> rel(?NAME).
-cancel() -> cancel(?NAME).
-cancel_wait() -> cancel_wait(?NAME).
-uncancel() -> uncancel(?NAME).
-stat() -> stat(?NAME).
+acq_excl() -> acq_excl(?NAME0).
+rel_excl() -> rel_excl(?NAME0).
+acq() -> acq(?NAME0).
+rel() -> rel(?NAME0).
+cancel() -> cancel(?NAME0).
+cancel_wait() -> cancel_wait(?NAME0).
+uncancel() -> uncancel(?NAME0).
+stat() -> stat(?NAME0).
