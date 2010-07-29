@@ -96,10 +96,10 @@ check_invariants(_S = #state{waiting_readers=R,waiting_writers=W,waiting_cancele
 	% sanity of who
 	case Who of
 		{readers, N} when is_integer(N), N >= 1 -> ok;
-		{readers, _} -> {error,Who};
+		{readers, _} -> {error1,Who};
 		{writer, _} -> ok;
 		undefined -> ok;
-		_ -> {error,Who}
+		_ -> {error2,Who}
 	end,
 	% if there is a list of cancelers, then we for sure canceled
 	case C of
@@ -109,9 +109,9 @@ check_invariants(_S = #state{waiting_readers=R,waiting_writers=W,waiting_cancele
 	% if noreply, then one of the waiting_* incresaed its size by one, and who do not changed!
 	%    we also know that for acq it will grow readers, acq_excl writers, and cancel_wait
 	case {R,RL} of
-		{[],L} when L =/= 0 -> error;
-		{[_],L} when L =/= 1 -> error;
-		{[_,_],L} when L =/= 2 -> error;
+		{[],L} when L =/= 0 -> {error1,R,RL};
+		{[_],L} when L =/= 1 -> {error2,R,RL};
+		{[_,_],L} when L =/= 2 -> {error3,R,RL};
 		_ -> ok
 	end
 	},
