@@ -32,14 +32,15 @@ go() ->
 	repeat(2000, fun(_) -> ok = gen_test(gen_size()) end).
 
 gen_size() ->
-	case random:uniform(7) of
+	case random:uniform(8) of
 		1 -> 1;
 		2 -> 2;
 		3 -> 3;
 		4 -> 4;
 		5 -> random:uniform(10);
 		6 -> random:uniform(100);
-		7 -> random:uniform(1000)
+		7 -> random:uniform(1000);
+		8 -> random:uniform(10000)
 	end.
 
 gen_test(N) ->
@@ -54,7 +55,10 @@ gen_test(N, MainSeed) ->
 	io:format("main seed ~p~n", [MainSeed]),
 	io:format("wielok started:~n", []),
 	Self = self(),
-	Count = gen_size(), % maximal number of command to execute by processes
+	Count = case gen_size() of % maximal number of command to execute by processes
+		Count0 when Count0 > 1000 -> 1000;
+		Count0 -> Count0
+	end,
 
 	io:format("Starting ~p processes, each for maximal ~p commands.~n", [N, Count]),
 	Processes = repeat_collect(N, fun(I) -> spawn_link(fun() -> test_start(I, Self, {seed, MainSeed, I}, Count) end) end),
@@ -88,17 +92,18 @@ test_start(I, Parent, Seed, Count) ->
 	X = random:uniform(Count),
 	io:format("starter process #~p, doing ~p commands~n", [I, X]),
 	Tests = [
-		{0.05, stat, fun subtest_stat/0},
+		{0.01, stat, fun subtest_stat/0},
 		{0.05, sleep, fun subtest_sleep/0},
-		{0.02, cancel, fun subtest_cancel/0},
-		{0.02, cancel_wait, fun subtest_cancel_wait/0},
-		{0.08, uncancel, fun subtest_uncancel/0},
+		{0.001, cancel, fun subtest_cancel/0},
+		{0.001, cancel_wait, fun subtest_cancel_wait/0},
+		{0.005, uncancel, fun subtest_uncancel/0},
 		{0.1, acq_excl, fun subtest_acq_excl/0}, % and rel_excl
 		{0.9, acq, fun subtest_acq/0}, % and rel
 		{0.1, acq_excl_trans, fun subtest_acq_excl_trans/0},
 		{0.9, acq_trans, fun subtest_acq_trans/0}
 	],
 	ProbSum = lists:foldl(fun({Prob,_,_},Sum) when Prob > 0.0 -> Sum+Prob end, 0.0, Tests),
+	sleep(random:uniform(50)),
 	repeat(X, fun(_) -> test_go_sub(Tests, ProbSum) end),
 	Parent ! {self(), done}.
 
@@ -157,8 +162,13 @@ subtest_acq() ->
 	?debug("~p acq done ~p~n",[self(), X]),
 	case X of
 		ok ->
-			Timeout = random:uniform(100),
-			sleep(Timeout),
+			case random:uniform(5) of
+				1 ->
+					ok;
+				_ ->
+					Timeout = random:uniform(30),
+					sleep(Timeout)
+			end,
 			?debug("~p rel ~p~n",[self(), X]),
 			ok = wielok:rel(?NAME);
 		canceled ->
@@ -170,8 +180,13 @@ subtest_acq_excl() ->
 	?debug("~p acq_excl done ~p~n",[self(), X]),
 	case X of
 		ok ->
-			Timeout = random:uniform(5),
-			sleep(Timeout),
+			case random:uniform(5) of
+				1 ->
+					ok;
+				_ ->
+					Timeout = random:uniform(30),
+					sleep(Timeout)
+			end,
 			?debug("~p rel_excl ~p~n",[self(), X]),
 			ok = wielok:rel_excl(?NAME);
 		canceled ->
@@ -187,8 +202,13 @@ subtest_acq_trans() ->
 				_ ->
 					ok
 			end,
-			Timeout = random:uniform(40),
-			sleep(Timeout),
+			case random:uniform(5) of
+				1 ->
+					ok;
+				_ ->
+					Timeout = random:uniform(30),
+					sleep(Timeout)
+			end,
 			case random:uniform(20) of
 				1 ->
 					throw(bad);
@@ -196,7 +216,8 @@ subtest_acq_trans() ->
 					ok
 			end
 		end),
-	?debug("~p read done ~p~n",[self(), X]).
+	?debug("~p read done ~p~n",[self(), X]),
+	ok.
 
 subtest_acq_excl_trans() ->
 	X = wielok:write(?NAME, fun() ->
@@ -206,8 +227,13 @@ subtest_acq_excl_trans() ->
 				_ ->
 					ok
 			end,
-			Timeout = random:uniform(40),
-			sleep(Timeout),
+			case random:uniform(5) of
+				1 ->
+					ok;
+				_ ->
+					Timeout = random:uniform(30),
+					sleep(Timeout)
+			end,
 			case random:uniform(20) of
 				1 ->
 					throw(bad);
@@ -215,7 +241,8 @@ subtest_acq_excl_trans() ->
 					ok
 			end
 		end),
-	?debug("~p write done ~p~n",[self(), X]).
+	?debug("~p write done ~p~n",[self(), X]),
+	ok.
 
 
 sleep(T) ->
@@ -227,6 +254,6 @@ sleep(T) ->
 	end.
 
 subtest_sleep() ->
-	Timeout = random:uniform(100),
+	Timeout = random:uniform(50),
 	sleep(Timeout),
 	ok.
